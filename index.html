@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>외대생 맛집 지도 - HUFS Foodie Map</title>
+<style>
+  :root{
+    --primary:#1f3c88;
+    --primary-dark:#152a63;
+    --primary-light:#3b5bdb;
+    --accent:#f5a623;
+    --danger:#e0574c;
+    --ok:#2f9e6e;
+    --bg:#f4f6fb;
+    --surface:#ffffff;
+    --border:#dde3f0;
+    --text:#1c2438;
+    --text-mute:#6b7488;
+    --radius:12px;
+    --shadow:0 2px 10px rgba(31,60,136,0.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Malgun Gothic","Apple SD Gothic Neo","Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+  }
+  header.app-header{
+    background:linear-gradient(120deg,var(--primary-dark),var(--primary));
+    color:#fff;
+    padding:20px 20px 16px;
+  }
+  header.app-header h1{margin:0 0 4px;font-size:22px;}
+  header.app-header p{margin:0;font-size:13.5px;color:#dbe4ff;}
+  .header-badges{margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;}
+  .hbadge{
+    display:inline-block;
+    background:rgba(255,255,255,0.14);
+    border:1px solid rgba(255,255,255,0.32);
+    padding:3px 10px;
+    border-radius:999px;
+    font-size:11.5px;
+  }
+  .hbadge.live{background:rgba(74,222,128,0.22);border-color:rgba(74,222,128,0.55);}
+
+  .guide-box{max-width:1240px;margin:14px auto 0;padding:0 16px;}
+  details.guide{
+    background:#fffceb;
+    border:1px solid #f1e2a8;
+    border-radius:var(--radius);
+    padding:10px 14px;
+  }
+  details.guide summary{cursor:pointer;font-weight:700;font-size:13.5px;color:#7a5b00;}
+  details.guide ol{margin:10px 0 4px;padding-left:20px;font-size:13px;color:#5c4b12;}
+  details.guide ol li{margin-bottom:3px;}
+  details.guide .warn{margin-top:8px;font-size:12px;color:#a14b2f;}
+  details.guide code{
+    background:#f3ecd2;padding:1px 5px;border-radius:4px;font-size:11.5px;
+  }
+
+  .layout{
+    max-width:1240px;
+    margin:16px auto 60px;
+    padding:0 16px;
+    display:grid;
+    grid-template-columns:238px 1fr;
+    gap:16px;
+  }
+  aside.sidebar{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px;
+    box-shadow:var(--shadow);
+    align-self:start;
+    position:sticky;
+    top:16px;
+  }
+  aside.sidebar h2{font-size:14px;margin:0 0 10px;color:var(--primary-dark);}
+  .filter-group{margin-bottom:14px;}
+  .filter-group h3{font-size:12px;color:var(--text-mute);margin:0 0 6px;font-weight:600;}
+  .filter-group label{
+    display:flex;align-items:center;gap:6px;
+    font-size:13px;padding:3px 0;cursor:pointer;
+  }
+  select.filter-select{
+    width:100%;padding:6px 8px;border-radius:8px;
+    border:1px solid var(--border);font-size:13px;background:#fff;
+  }
+  button{font-family:inherit;cursor:pointer;}
+  .btn{
+    border:none;border-radius:8px;padding:8px 12px;
+    font-size:13px;font-weight:600;
+    background:var(--primary);color:#fff;width:100%;
+  }
+  .btn:hover{background:var(--primary-light);}
+  .btn:disabled{background:#b9c0d4;cursor:not-allowed;}
+  .btn.secondary{background:#fff;color:var(--primary);border:1px solid var(--primary);}
+  .btn.secondary:hover{background:#eef2ff;}
+  .btn.secondary:disabled{background:#f4f5f9;color:#aab;border-color:var(--border);cursor:not-allowed;}
+  .btn.ghost{background:transparent;color:var(--text-mute);border:1px solid var(--border);}
+  .btn.small{width:auto;padding:6px 10px;font-size:12px;}
+  .sidebar-actions{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  .sidebar-sep{border-top:1px solid var(--border);margin:14px 0 12px;}
+  .reset-note{font-size:11px;color:var(--text-mute);margin-top:8px;}
+
+  main.content{display:flex;flex-direction:column;gap:16px;min-width:0;}
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:14px;
+  }
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:10px;flex-wrap:wrap;gap:8px;
+  }
+  .panel-head h2{font-size:15px;margin:0;color:var(--primary-dark);}
+  .map-status{
+    font-size:11.5px;padding:4px 10px;border-radius:999px;
+    background:#f1f2f6;color:var(--text-mute);
+  }
+  .map-status.live{background:#e7f8ee;color:#1f7a4d;}
+  .map-status.err{background:#fdecea;color:#a13a30;}
+  .add-mode-hint{
+    font-size:12px;padding:6px 10px;border-radius:8px;
+    background:#fff4e0;color:#8a5a12;border:1px solid #f3dcb4;
+    display:none;
+  }
+  .add-mode-hint.active{display:inline-block;}
+
+  .map-wrap{position:relative;width:100%;aspect-ratio:16/10;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  #kakaoMap{position:absolute;inset:0;display:none;}
+  #kakaoMap.on{display:block;}
+  #schematicMap{position:absolute;inset:0;background:#f7f9ff;cursor:crosshair;display:none;}
+  #schematicMap.on{display:block;}
+  .map-wrap.placing{outline:2px dashed var(--accent);outline-offset:-2px;}
+  #schematicSvg{position:absolute;inset:0;width:100%;height:100%;}
+
+  .landmark{
+    position:absolute;transform:translate(-50%,-50%);
+    font-size:10.5px;font-weight:700;color:var(--primary-dark);
+    background:rgba(255,255,255,0.88);
+    border:1px solid #c9d4f2;
+    padding:2px 6px;border-radius:6px;
+    pointer-events:none;white-space:nowrap;
+  }
+  .landmark.campus{
+    background:#dbe4ff;border-color:var(--primary);
+    font-size:11.5px;padding:5px 9px;
+  }
+  .map-note{
+    position:absolute;right:8px;bottom:8px;
+    font-size:10.5px;color:var(--text-mute);
+    background:rgba(255,255,255,0.88);
+    padding:3px 7px;border-radius:6px;pointer-events:none;
+  }
+
+  .pin{
+    position:absolute;transform:translate(-50%,-100%);
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;z-index:3;
+  }
+  .pin-dot{
+    width:24px;height:24px;border-radius:50% 50% 50% 0;
+    background:var(--primary);transform:rotate(-45deg);
+    border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.25);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pin-dot span{transform:rotate(45deg);font-size:11px;}
+  .pin.closed .pin-dot{background:#9aa3b8;}
+  .pin.study .pin-dot{background:var(--ok);}
+  .pin-label{
+    margin-top:2px;font-size:10.5px;background:#fff;
+    padding:1px 5px;border-radius:5px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.15);
+    white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;
+  }
+  .empty-map-tip{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--text-mute);font-size:13px;text-align:center;padding:20px;
+    pointer-events:none;z-index:2;
+  }
+
+  .legend{
+    display:flex;gap:14px;flex-wrap:wrap;
+    font-size:11.5px;color:var(--text-mute);margin-top:8px;
+  }
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;}
+  .legend i.c-open{background:var(--primary);}
+  .legend i.c-closed{background:#9aa3b8;}
+  .legend i.c-study{background:var(--ok);}
+
+  .list-toolbar{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;color:var(--text-mute);margin-bottom:10px;gap:8px;flex-wrap:wrap;
+  }
+  #restaurantList{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:12px;
+  }
+  .r-card{
+    border:1px solid var(--border);border-radius:10px;padding:12px;background:#fff;
+    cursor:pointer;transition:box-shadow .15s, transform .15s;
+  }
+  .r-card:hover{box-shadow:0 4px 14px rgba(31,60,136,0.15);transform:translateY(-1px);}
+  .r-card h3{margin:0 0 2px;font-size:14.5px;display:flex;justify-content:space-between;gap:6px;}
+  .r-card .cat{font-size:11px;color:var(--text-mute);margin-bottom:6px;}
+  .rating{color:var(--accent);font-weight:700;font-size:13px;white-space:nowrap;}
+  .tag-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+  .tag{
+    font-size:10.5px;padding:2px 7px;border-radius:999px;
+    background:#eef2ff;color:var(--primary-dark);border:1px solid #d8e0fb;white-space:nowrap;
+  }
+  .tag.good{background:#e7f8ee;color:#1f7a4d;border-color:#c9ecd8;}
+  .tag.bad{background:#fdecea;color:#a13a30;border-color:#f6cfc9;}
+  .tag.muted{background:#f1f2f6;color:var(--text-mute);border-color:#e3e5ec;}
+  .tag.demo{background:#f3e8ff;color:#6b21a8;border-color:#e2d0f7;}
+  .no-review-note{font-size:11px;color:var(--text-mute);margin-top:8px;}
+  .empty-state{
+    grid-column:1/-1;text-align:center;color:var(--text-mute);
+    font-size:13px;padding:30px 10px;
+  }
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(20,25,45,0.5);
+    display:none;align-items:flex-start;justify-content:center;
+    padding:30px 14px;overflow-y:auto;z-index:50;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:#fff;border-radius:14px;width:100%;max-width:580px;
+    padding:20px;box-shadow:0 10px 40px rgba(0,0,0,0.25);
+  }
+  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+  .modal-head h2{margin:0;font-size:17px;}
+  .modal-close{background:none;border:none;font-size:20px;color:var(--text-mute);line-height:1;}
+  .modal-sub{font-size:12px;color:var(--text-mute);margin-bottom:14px;}
+  .modal-sub a{color:var(--primary);}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0 16px;}
+  .stat-box{
+    background:#f7f9ff;border:1px solid var(--border);border-radius:8px;
+    padding:8px 10px;font-size:12px;
+  }
+  .stat-box b{display:block;font-size:14px;color:var(--primary-dark);}
+
+  .place-meta{
+    background:#f7f9ff;border:1px solid var(--border);border-radius:8px;
+    padding:9px 11px;font-size:12px;margin-bottom:12px;
+  }
+  .place-meta div{margin:2px 0;}
+  .place-meta .src{color:var(--text-mute);font-size:11px;margin-top:5px;}
+
+  .section-title{
+    font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--primary-dark);
+    border-top:1px solid var(--border);padding-top:12px;
+  }
+  .review-item{
+    border:1px solid var(--border);border-radius:8px;
+    padding:9px 11px;margin-bottom:8px;font-size:12.5px;
+  }
+  .review-item .review-top{
+    display:flex;justify-content:space-between;color:var(--text-mute);
+    font-size:11px;margin-bottom:4px;
+  }
+  .review-item .review-tags{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0;}
+  .review-item p{margin:4px 0 0;}
+
+  form.rform{display:flex;flex-direction:column;gap:10px;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:12px;font-weight:600;color:var(--text-mute);}
+  .field input[type=text], .field textarea, .field select{
+    padding:7px 9px;border:1px solid var(--border);border-radius:8px;
+    font-size:13px;font-family:inherit;
+  }
+  .field textarea{resize:vertical;min-height:56px;}
+  .field .hint{font-size:11px;color:var(--text-mute);font-weight:400;}
+  .choice-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .choice-row label{
+    display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;
+    border:1px solid var(--border);border-radius:999px;padding:5px 10px;cursor:pointer;
+  }
+  .choice-row input{margin:0;}
+  .star-select{display:flex;gap:4px;font-size:22px;user-select:none;}
+  .star-select span{cursor:pointer;color:#d9dce6;}
+  .star-select span.on{color:var(--accent);}
+  .form-actions{display:flex;gap:8px;margin-top:4px;}
+  .form-actions .btn{width:auto;flex:1;}
+
+  .import-controls{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;}
+  .import-controls .field{flex:1;min-width:130px;}
+  #importResults{max-height:340px;overflow-y:auto;}
+  .imp-item{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    border:1px solid var(--border);border-radius:8px;
+    padding:8px 10px;margin-bottom:7px;font-size:12.5px;
+  }
+  .imp-item .imp-info{min-width:0;}
+  .imp-item .imp-name{font-weight:700;}
+  .imp-item .imp-sub{color:var(--text-mute);font-size:11px;}
+  .imp-item .added{font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap;}
+  .setup-steps{font-size:12.5px;color:var(--text);padding-left:18px;margin:6px 0 12px;}
+  .setup-steps li{margin-bottom:5px;}
+  .setup-steps code{background:#f1f2f6;padding:1px 5px;border-radius:4px;font-size:11.5px;}
+
+  #toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--primary-dark);color:#fff;
+    padding:9px 18px;border-radius:999px;font-size:13px;
+    opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;z-index:100;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  @media (max-width:760px){
+    .layout{grid-template-columns:1fr;}
+    aside.sidebar{position:static;}
+    .stat-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>🍚 외대생 맛집 지도</h1>
+  <p>한국외대 서울캠퍼스 학생을 위한, 학생 맥락 기반 맛집 리뷰 서비스</p>
+  <div class="header-badges">
+    <span class="hbadge" id="badgeMapMode">지도 모드 확인 중…</span>
+    <span class="hbadge">⚠ 리뷰 데이터는 이 브라우저에만 저장됩니다</span>
+  </div>
+</header>
+
+<div class="guide-box">
+  <details class="guide" open>
+    <summary>📌 이용 안내 (처음이시면 펼쳐보세요)</summary>
+    <ol>
+      <li>지도에서 핀을 누르면 그 가게의 상세 정보와 학생 리뷰를 볼 수 있어요.</li>
+      <li>리뷰를 쓸 때 <b>가격대 / 혼밥 가능 / 방문 시 영업 여부 / 공부(작업) 가능 / 콘센트·와이파이</b>를 체크하면, 다른 학생이 왼쪽 필터로 조건에 맞는 가게만 골라 볼 수 있어요.</li>
+      <li><b>주변 가게 불러오기</b>를 누르면 카카오 장소 데이터에서 학교 반경 안의 실제 음식점·카페를 상호·주소째로 가져옵니다. (카카오맵 모드에서만)</li>
+      <li>목록에 없는 가게는 <b>새 맛집 등록</b>으로 지도를 클릭해 직접 추가할 수 있어요.</li>
+    </ol>
+    <div class="warn">
+      ※ <b>가게의 상호·주소·좌표는 카카오 장소 데이터</b>에서 오고, <b>혼밥·콘센트·공부 가능 여부 같은 학생 맥락 정보는 우리 학교 학생들의 리뷰</b>로 쌓입니다. 영업 상태는 실시간 정보가 아니라 <b>최근 방문한 학생의 제보</b>이니 방문 전 확인하세요.<br>
+      ※ 카카오 JS 키가 없으면 실제 지도 대신 <b>간이 배치도</b>로 동작합니다 (위치 관계는 실좌표 기반이지만 축척·도로 모양은 정확하지 않음). 키 설정은 왼쪽 <code>지도 설정</code> 버튼에서 합니다.
+    </div>
+  </details>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h2>🔎 조건으로 찾기</h2>
+
+    <div class="filter-group">
+      <h3>카테고리</h3>
+      <select id="filterCategory" class="filter-select">
+        <option value="">전체</option>
+        <option value="한식">한식</option>
+        <option value="분식">분식</option>
+        <option value="카페">카페</option>
+        <option value="중식">중식</option>
+        <option value="일식">일식</option>
+        <option value="양식">양식</option>
+        <option value="술집/포차">술집/포차</option>
+        <option value="기타">기타</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <h3>가격대 (리뷰 대표값)</h3>
+      <select id="filterPrice" class="filter-select">
+        <option value="">전체</option>
+        <option value="저렴">💰 5,000원 이하</option>
+        <option value="보통">💰 5,000~10,000원</option>
+        <option value="비쌈">💰 10,000원 이상</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <h3>학생 맥락 필터</h3>
+      <label><input type="checkbox" id="fSolo"> 🧍 혼밥 가능한 곳만</label>
+      <label><input type="checkbox" id="fStudy"> 📖 공부/작업 가능한 곳만</label>
+      <label><input type="checkbox" id="fOutlet"> 🔌 콘센트 있는 곳만</label>
+      <label><input type="checkbox" id="fWifi"> 📶 와이파이 있는 곳만</label>
+      <label><input type="checkbox" id="fOpen"> 🟢 최근 리뷰 기준 영업중만</label>
+      <label><input type="checkbox" id="fReviewed"> ✍️ 리뷰 있는 곳만</label>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="btn secondary" id="btnClearFilter">필터 초기화</button>
+    </div>
+
+    <div class="sidebar-sep"></div>
+    <h2>🛠 가게 관리</h2>
+    <div class="sidebar-actions">
+      <button class="btn" id="btnImport">🔍 주변 가게 불러오기</button>
+      <button class="btn secondary" id="btnAddMode">📍 새 맛집 등록</button>
+      <button class="btn ghost" id="btnSettings">⚙ 지도 설정</button>
+      <button class="btn ghost" id="btnLoadDemo">🎬 시연용 데모 데이터</button>
+      <button class="btn ghost" id="btnResetData">데이터 전체 초기화</button>
+    </div>
+    <p class="reset-note">데모 데이터는 실존 매장이 아닌 가상 예시입니다. 초기화 후에도 위 버튼으로 다시 넣을 수 있어요.</p>
+  </aside>
+
+  <main class="content">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>🗺 한국외대 주변 지도</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span class="add-mode-hint" id="addModeHint">지도를 클릭해 위치를 지정하세요</span>
+          <span class="map-status" id="mapStatus">초기화 중…</span>
+        </div>
+      </div>
+      <div class="map-wrap" id="mapWrap">
+        <div id="kakaoMap"></div>
+        <div id="schematicMap">
+          <svg id="schematicSvg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          <div class="map-note">간이 배치도 · 실제 축척/도로 모양 아님</div>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="c-open"></i> 최근 영업중 제보</span>
+        <span><i class="c-closed"></i> 최근 영업종료 제보</span>
+        <span><i class="c-study"></i> 공부하기 좋음 (리뷰 과반)</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>📋 맛집 목록</h2></div>
+      <div class="list-toolbar">
+        <span id="listCount">0개 표시 중</span>
+        <span>카드를 누르면 상세/리뷰를 볼 수 있어요</span>
+      </div>
+      <div id="restaurantList"></div>
+    </div>
+  </main>
+</div>
+
+<!-- 상세 + 리뷰 -->
+<div class="modal-overlay" id="detailOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="dTitle">-</h2>
+        <div class="modal-sub" id="dSub">-</div>
+      </div>
+      <button class="modal-close" data-close>✕</button>
+    </div>
+
+    <div class="place-meta" id="dPlaceMeta"></div>
+    <div class="stat-grid" id="dStats"></div>
+
+    <div class="section-title">학생 리뷰 (<span id="dReviewCount">0</span>)</div>
+    <div id="dReviewList"></div>
+
+    <div class="section-title">✍️ 리뷰 남기기</div>
+    <form class="rform" id="reviewForm">
+      <div class="field">
+        <label>별점</label>
+        <div class="star-select" id="starSelect">
+          <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>닉네임 <span class="hint">(선택, 비우면 "익명")</span></label>
+        <input type="text" id="rvNickname" placeholder="예: 미디어25 익명이" maxlength="20">
+      </div>
+      <div class="field">
+        <label>1인 기준 가격대</label>
+        <div class="choice-row">
+          <label><input type="radio" name="rvPrice" value="저렴" checked> 5천원 이하</label>
+          <label><input type="radio" name="rvPrice" value="보통"> 5천~1만원</label>
+          <label><input type="radio" name="rvPrice" value="비쌈"> 1만원 이상</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>혼밥 가능한가요?</label>
+        <div class="choice-row">
+          <label><input type="radio" name="rvSolo" value="가능" checked> 가능해요</label>
+          <label><input type="radio" name="rvSolo" value="애매"> 애매해요</label>
+          <label><input type="radio" name="rvSolo" value="불가능"> 어려워요</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>방문 당시 영업 상태</label>
+        <div class="choice-row">
+          <label><input type="radio" name="rvOpen" value="영업중" checked> 영업중이었어요</label>
+          <label><input type="radio" name="rvOpen" value="영업종료"> 문 닫았어요</label>
+          <label><input type="radio" name="rvOpen" value="모름"> 잘 모르겠어요</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>공부/과제 하기 좋은가요?</label>
+        <div class="choice-row">
+          <label><input type="radio" name="rvStudy" value="가능" checked> 좋아요</label>
+          <label><input type="radio" name="rvStudy" value="비추천"> 별로예요</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>콘센트</label>
+        <div class="choice-row">
+          <label><input type="radio" name="rvOutlet" value="있음" checked> 있어요</label>
+          <label><input type="radio" name="rvOutlet" value="없음"> 없어요</label>
+          <label><input type="radio" name="rvOutlet" value="모름"> 못 봤어요</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>와이파이</label>
+        <div class="choice-row">
+          <label><input type="radio" name="rvWifi" value="있음" checked> 있어요</label>
+          <label><input type="radio" name="rvWifi" value="없음"> 없어요</label>
+          <label><input type="radio" name="rvWifi" value="모름"> 못 봤어요</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>한줄 코멘트 <span class="hint">(선택)</span></label>
+        <textarea id="rvComment" maxlength="300" placeholder="예: 시험기간에 혼자 가서 공부하기 좋았어요"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn">리뷰 등록</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 새 맛집 등록 -->
+<div class="modal-overlay" id="addOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>📍 새 맛집 등록</h2>
+      <button class="modal-close" data-close>✕</button>
+    </div>
+    <div class="modal-sub" id="addCoordText">지도에서 클릭한 위치에 등록됩니다.</div>
+    <form class="rform" id="addForm">
+      <div class="field">
+        <label>가게 이름 *</label>
+        <input type="text" id="newName" placeholder="예: 이문동 ○○식당" maxlength="40" required>
+      </div>
+      <div class="field">
+        <label>카테고리</label>
+        <select id="newCategory">
+          <option value="한식">한식</option>
+          <option value="분식">분식</option>
+          <option value="카페">카페</option>
+          <option value="중식">중식</option>
+          <option value="일식">일식</option>
+          <option value="양식">양식</option>
+          <option value="술집/포차">술집/포차</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>주소 또는 위치 설명 <span class="hint">(선택)</span></label>
+        <input type="text" id="newAddress" placeholder="예: 정문에서 도보 3분, 이문로 ○○" maxlength="60">
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn">등록하고 첫 리뷰 남기기</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 주변 가게 불러오기 -->
+<div class="modal-overlay" id="importOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>🔍 주변 가게 불러오기</h2>
+      <button class="modal-close" data-close>✕</button>
+    </div>
+    <div class="modal-sub">한국외대 서울캠퍼스를 중심으로 카카오 장소 데이터에서 실제 음식점·카페를 검색합니다.</div>
+    <div class="import-controls">
+      <div class="field">
+        <label>종류</label>
+        <select id="impCategory">
+          <option value="FD6">음식점 전체</option>
+          <option value="CE7">카페</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>반경</label>
+        <select id="impRadius">
+          <option value="300">300m</option>
+          <option value="500" selected>500m</option>
+          <option value="1000">1km</option>
+        </select>
+      </div>
+      <div class="field" style="flex:2;">
+        <label>키워드 <span class="hint">(선택)</span></label>
+        <input type="text" id="impKeyword" placeholder="예: 국밥, 분식 (비우면 종류 전체)" maxlength="20">
+      </div>
+      <button class="btn small" id="btnRunImport" style="height:34px;">검색</button>
+    </div>
+    <div id="importResults"></div>
+  </div>
+</div>
+
+<!-- 지도 설정 -->
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>⚙ 지도 설정</h2>
+      <button class="modal-close" data-close>✕</button>
+    </div>
+    <div class="modal-sub">카카오맵 JS 키를 넣으면 실제 지도와 실제 가게 검색을 쓸 수 있습니다.</div>
+    <ol class="setup-steps">
+      <li>카카오 개발자 사이트에서 애플리케이션을 만들고 <b>JavaScript 키</b>를 발급받으세요.</li>
+      <li>그 앱의 <b>플랫폼 &gt; Web</b>에 이 페이지를 띄울 주소를 등록하세요. (예: <code>http://localhost:8000</code>)</li>
+      <li>카카오맵은 <code>file://</code>로 연 페이지에서는 동작하지 않습니다. 폴더에서 아래 명령으로 띄운 뒤 <code>http://localhost:8000/team-tool.html</code> 로 접속하세요.<br>
+        <code>python -m http.server 8000</code></li>
+      <li>발급받은 키를 아래에 붙여넣고 저장하세요. 키는 이 브라우저에만 저장됩니다.</li>
+    </ol>
+    <form class="rform" id="settingsForm">
+      <div class="field">
+        <label>카카오 JavaScript 키</label>
+        <input type="text" id="kakaoKeyInput" placeholder="예: 0a1b2c3d4e5f..." autocomplete="off" spellcheck="false">
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn">저장하고 지도 다시 불러오기</button>
+        <button type="button" class="btn ghost" id="btnClearKey" style="width:auto;flex:0 0 auto;">키 삭제</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===== 상수 ===== */
+  var STORAGE_KEY = "hufs_foodie_map_v2";
+  var KEY_STORAGE = "hufs_foodie_kakao_key";
+
+  // 한국외대 서울캠퍼스 및 주변 주요 지점 (대략 좌표)
+  var CAMPUS = {lat:37.5975, lng:127.0585};
+  var LANDMARKS = [
+    {lat:37.5975, lng:127.0585, name:"한국외대 서울캠퍼스", campus:true},
+    {lat:37.5960, lng:127.0597, name:"외대앞역 (1호선)"},
+    {lat:37.5895, lng:127.0578, name:"회기역 (1호선)"},
+    {lat:37.5966, lng:127.0518, name:"경희대 방향"}
+  ];
+  // 간이 배치도 투영 범위
+  var BOUNDS = {minLat:37.5860, maxLat:37.6050, minLng:127.0470, maxLng:127.0700};
+
+  // 시연용 가상 가게. 좌표는 캠퍼스 주변 실제 위치지만 상호는 실존 매장이 아님.
+  var DEMO_PLACES = [
+    {
+      demoKey:"d1", name:"[데모] 정문앞 든든분식", category:"분식",
+      address:"정문에서 도보 2분 (시연용 가상 위치)",
+      lat:37.59665, lng:127.05935,
+      reviews:[
+        {rating:5, price:"저렴", solo:"가능", open:"영업중", study:"비추천", outlet:"없음", wifi:"모름",
+         comment:"떡볶이 국물이 진해요. 혼자 가도 눈치 안 보입니다.", date:"2026-08-21"},
+        {rating:4, price:"저렴", solo:"가능", open:"영업중", study:"비추천", outlet:"없음", wifi:"없음",
+         comment:"점심시간엔 줄 서요. 12시 전에 가는 걸 추천.", date:"2026-09-02"}
+      ]
+    },
+    {
+      demoKey:"d2", name:"[데모] 라운지 커피", category:"카페",
+      address:"후문 방향 (시연용 가상 위치)",
+      lat:37.59805, lng:127.05930,
+      reviews:[
+        {rating:5, price:"보통", solo:"가능", open:"영업중", study:"가능", outlet:"있음", wifi:"있음",
+         comment:"콘센트 자리 넉넉하고 와이파이 빨라요. 시험기간 강력 추천!", date:"2026-08-30"},
+        {rating:4, price:"보통", solo:"가능", open:"영업중", study:"가능", outlet:"있음", wifi:"있음",
+         comment:"6시 넘으면 자리가 꽉 차요. 노트북 쓰기 좋습니다.", date:"2026-09-08"},
+        {rating:5, price:"보통", solo:"가능", open:"영업중", study:"가능", outlet:"있음", wifi:"있음",
+         comment:"조용해서 과제하기 좋아요.", date:"2026-09-12"}
+      ]
+    },
+    {
+      demoKey:"d3", name:"[데모] 이문동 청년국밥", category:"한식",
+      address:"이문로 방향 (시연용 가상 위치)",
+      lat:37.59720, lng:127.06010,
+      reviews:[
+        {rating:4, price:"보통", solo:"애매", open:"영업종료", study:"비추천", outlet:"없음", wifi:"모름",
+         comment:"저녁 9시에 갔는데 이미 마감이었어요. 낮에 가세요.", date:"2026-09-10"},
+        {rating:5, price:"보통", solo:"불가능", open:"영업중", study:"비추천", outlet:"없음", wifi:"없음",
+         comment:"국물 진하고 양 많아요. 4인 테이블 위주라 혼밥은 좀 부담.", date:"2026-07-19"}
+      ]
+    },
+    {
+      demoKey:"d4", name:"[데모] 외대앞 돈카츠", category:"일식",
+      address:"외대앞역 1번 출구 인근 (시연용 가상 위치)",
+      lat:37.59610, lng:127.05885,
+      reviews:[
+        {rating:4, price:"비쌈", solo:"가능", open:"영업중", study:"비추천", outlet:"없음", wifi:"있음",
+         comment:"1인석 있어서 혼밥 편해요. 대신 가격은 좀 있는 편.", date:"2026-09-05"}
+      ]
+    },
+    {
+      demoKey:"d5", name:"[데모] 후문 마라탕", category:"중식",
+      address:"후문 골목 (시연용 가상 위치)",
+      lat:37.59880, lng:127.05760,
+      reviews:[
+        {rating:3, price:"보통", solo:"가능", open:"영업중", study:"비추천", outlet:"있음", wifi:"있음",
+         comment:"혼밥 손님 많아요. 콘센트가 벽쪽 자리에만 있습니다.", date:"2026-08-14"},
+        {rating:4, price:"보통", solo:"가능", open:"영업중", study:"비추천", outlet:"없음", wifi:"있음",
+         comment:"양 조절 가능해서 좋아요.", date:"2026-09-11"}
+      ]
+    },
+    {
+      demoKey:"d6", name:"[데모] 이문로 포차", category:"술집/포차",
+      address:"외대앞역 방향 (시연용 가상 위치)",
+      lat:37.59560, lng:127.05990,
+      reviews:[
+        {rating:4, price:"비쌈", solo:"불가능", open:"영업중", study:"비추천", outlet:"없음", wifi:"없음",
+         comment:"과 회식 장소로 자주 갔어요. 혼자 가긴 어려운 분위기.", date:"2026-06-27"}
+      ]
+    },
+    {
+      demoKey:"d7", name:"[데모] 정문 샐러드볼", category:"양식",
+      address:"정문 앞 (시연용 가상 위치 · 리뷰 없는 상태 예시)",
+      lat:37.59700, lng:127.05790,
+      reviews:[]
+    }
+  ];
+
+  function buildDemoData(){
+    return DEMO_PLACES.map(function(p){
+      return {
+        id: uid(),
+        demoKey: p.demoKey,
+        name: p.name,
+        category: p.category,
+        address: p.address,
+        phone: "",
+        placeUrl: "",
+        source: "demo",
+        lat: p.lat,
+        lng: p.lng,
+        reviews: p.reviews.map(function(rv){
+          var copy = {};
+          Object.keys(rv).forEach(function(k){ copy[k] = rv[k]; });
+          copy.id = uid();
+          copy.nickname = "익명";
+          return copy;
+        })
+      };
+    });
+  }
+
+  var state = {
+    restaurants: [],
+    placing: false,
+    pendingCoord: null,
+    activeId: null,
+    selectedStar: 5,
+    mapMode: "schematic",   // "kakao" | "schematic"
+    kakaoMap: null,
+    overlays: []
+  };
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+  function escapeHtml(s){
+    var d = document.createElement("div");
+    d.textContent = s == null ? "" : s;
+    return d.innerHTML;
+  }
+
+  function toast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._h);
+    toast._h = setTimeout(function(){ t.classList.remove("show"); }, 2000);
+  }
+
+  /* ===== 저장소 ===== */
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ state.restaurants = JSON.parse(raw) || []; return; }
+    }catch(e){}
+    state.restaurants = buildDemoData();
+    save();
+  }
+  function save(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.restaurants)); }
+    catch(e){ /* 사생활 보호 모드 등에서 저장 불가 */ }
+  }
+  function getKey(){
+    try{ return localStorage.getItem(KEY_STORAGE) || ""; }catch(e){ return ""; }
+  }
+  function setKey(k){
+    try{ k ? localStorage.setItem(KEY_STORAGE, k) : localStorage.removeItem(KEY_STORAGE); }catch(e){}
+  }
+
+  /* ===== 좌표 투영 (간이 배치도용) ===== */
+  function toPercent(lat, lng){
+    return {
+      x: (lng - BOUNDS.minLng) / (BOUNDS.maxLng - BOUNDS.minLng) * 100,
+      y: (BOUNDS.maxLat - lat) / (BOUNDS.maxLat - BOUNDS.minLat) * 100
+    };
+  }
+  function fromPercent(x, y){
+    return {
+      lat: BOUNDS.maxLat - (y/100) * (BOUNDS.maxLat - BOUNDS.minLat),
+      lng: BOUNDS.minLng + (x/100) * (BOUNDS.maxLng - BOUNDS.minLng)
+    };
+  }
+
+  /* ===== 통계 ===== */
+  function mode(arr){
+    if(!arr.length) return null;
+    var count = {}, best = null, bestN = -1;
+    arr.forEach(function(v){ count[v] = (count[v]||0)+1; });
+    Object.keys(count).forEach(function(k){
+      if(count[k] > bestN){ bestN = count[k]; best = k; }
+    });
+    return {value:best, count:bestN, total:arr.length};
+  }
+
+  function computeStats(r){
+    var revs = r.reviews || [];
+    var n = revs.length;
+    var ratio = function(pred){
+      return n ? revs.filter(pred).length / n : null;
+    };
+    var latest = n ? revs.slice().sort(function(a,b){
+      return (b.date||"").localeCompare(a.date||"");
+    })[0] : null;
+    return {
+      n: n,
+      avgRating: n ? revs.reduce(function(s,v){return s+v.rating;},0)/n : null,
+      priceMode: mode(revs.map(function(v){return v.price;})),
+      soloRatio: ratio(function(v){return v.solo === "가능";}),
+      studyRatio: ratio(function(v){return v.study === "가능";}),
+      outletRatio: ratio(function(v){return v.outlet === "있음";}),
+      wifiRatio: ratio(function(v){return v.wifi === "있음";}),
+      latestOpenStatus: latest ? latest.open : null,
+      latestOpenDate: latest ? latest.date : null
+    };
+  }
+
+  function priceLabel(p){
+    if(p === "저렴") return "💰 5천원 이하";
+    if(p === "보통") return "💰 5천~1만원";
+    if(p === "비쌈") return "💰 1만원 이상";
+    return "가격 정보 없음";
+  }
+
+  /* ===== 필터 ===== */
+  function passFilters(r){
+    var s = computeStats(r);
+    var cat = document.getElementById("filterCategory").value;
+    var price = document.getElementById("filterPrice").value;
+
+    if(cat && r.category !== cat) return false;
+    if(price && (!s.priceMode || s.priceMode.value !== price)) return false;
+    if(document.getElementById("fReviewed").checked && s.n === 0) return false;
+    if(document.getElementById("fSolo").checked && !(s.soloRatio >= 0.5)) return false;
+    if(document.getElementById("fStudy").checked && !(s.studyRatio >= 0.5)) return false;
+    if(document.getElementById("fOutlet").checked && !(s.outletRatio >= 0.5)) return false;
+    if(document.getElementById("fWifi").checked && !(s.wifiRatio >= 0.5)) return false;
+    if(document.getElementById("fOpen").checked && s.latestOpenStatus !== "영업중") return false;
+    return true;
+  }
+
+  function pinClass(s){
+    if(s.latestOpenStatus === "영업종료") return "closed";
+    if(s.studyRatio >= 0.5) return "study";
+    return "";
+  }
+
+  /* ===== 지도: 카카오 ===== */
+  function loadKakaoSdk(key){
+    return new Promise(function(resolve, reject){
+      if(window.kakao && window.kakao.maps){ resolve(); return; }
+      var s = document.createElement("script");
+      s.src = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
+              encodeURIComponent(key) + "&libraries=services&autoload=false";
+      s.onload = function(){
+        if(window.kakao && window.kakao.maps){
+          window.kakao.maps.load(resolve);
+        } else {
+          reject(new Error("SDK 객체를 찾을 수 없습니다"));
+        }
+      };
+      s.onerror = function(){ reject(new Error("SDK 로드 실패")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function initKakaoMap(){
+    var container = document.getElementById("kakaoMap");
+    state.kakaoMap = new kakao.maps.Map(container, {
+      center: new kakao.maps.LatLng(CAMPUS.lat, CAMPUS.lng),
+      level: 4
+    });
+    state.kakaoMap.addControl(
+      new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT
+    );
+    kakao.maps.event.addListener(state.kakaoMap, "click", function(e){
+      if(!state.placing) return;
+      var ll = e.latLng;
+      handleMapPick(ll.getLat(), ll.getLng());
+    });
+  }
+
+  function setMapMode(m, statusText, statusClass){
+    state.mapMode = m;
+    document.getElementById("kakaoMap").classList.toggle("on", m === "kakao");
+    document.getElementById("schematicMap").classList.toggle("on", m === "schematic");
+    var st = document.getElementById("mapStatus");
+    st.textContent = statusText;
+    st.className = "map-status" + (statusClass ? " " + statusClass : "");
+    var badge = document.getElementById("badgeMapMode");
+    badge.textContent = m === "kakao" ? "🗺 카카오맵 연동 중" : "🗺 간이 배치도 모드 (카카오 키 없음)";
+    badge.className = "hbadge" + (m === "kakao" ? " live" : "");
+    document.getElementById("btnImport").disabled = (m !== "kakao");
+    document.getElementById("btnImport").title =
+      m === "kakao" ? "" : "카카오맵 모드에서만 사용할 수 있어요 (지도 설정에서 키 등록)";
+  }
+
+  function setupMap(){
+    var key = getKey();
+    if(!key){
+      setMapMode("schematic", "간이 배치도 (키 미설정)");
+      renderSchematicBase();
+      renderPins();
+      return;
+    }
+    document.getElementById("mapStatus").textContent = "카카오맵 불러오는 중…";
+    loadKakaoSdk(key).then(function(){
+      initKakaoMap();
+      setMapMode("kakao", "카카오맵 연동됨", "live");
+      renderPins();
+    }).catch(function(err){
+      setMapMode("schematic", "카카오맵 로드 실패 · 배치도로 대체", "err");
+      renderSchematicBase();
+      renderPins();
+      toast("카카오맵을 불러오지 못했어요. 키와 도메인 등록을 확인하세요.");
+    });
+  }
+
+  /* ===== 지도: 간이 배치도 ===== */
+  function renderSchematicBase(){
+    var svg = document.getElementById("schematicSvg");
+    var station1 = toPercent(37.5960, 127.0597); // 외대앞역
+    var station2 = toPercent(37.5895, 127.0578); // 회기역
+    var campus = toPercent(CAMPUS.lat, CAMPUS.lng);
+
+    svg.innerHTML =
+      '<rect x="0" y="0" width="100" height="100" fill="#f7f9ff"/>' +
+      // 철로 (회기역 ~ 외대앞역 ~ 북쪽)
+      '<line x1="'+station2.x+'" y1="100" x2="'+station1.x+'" y2="'+station1.y+'" stroke="#c3cbe0" stroke-width="1.6"/>' +
+      '<line x1="'+station1.x+'" y1="'+station1.y+'" x2="'+(station1.x+3)+'" y2="0" stroke="#c3cbe0" stroke-width="1.6"/>' +
+      // 이문로 (캠퍼스 앞 주요 도로)
+      '<line x1="'+station2.x+'" y1="100" x2="'+campus.x+'" y2="'+campus.y+'" stroke="#e2e6f2" stroke-width="2.6"/>' +
+      '<line x1="'+campus.x+'" y1="'+campus.y+'" x2="100" y2="'+(campus.y-12)+'" stroke="#e2e6f2" stroke-width="2.6"/>' +
+      '<line x1="0" y1="'+(campus.y+4)+'" x2="100" y2="'+(campus.y+8)+'" stroke="#e2e6f2" stroke-width="2"/>' +
+      // 캠퍼스 부지
+      '<rect x="'+(campus.x-11)+'" y="'+(campus.y-11)+'" width="22" height="22" rx="2" ' +
+        'fill="#dbe4ff" stroke="#1f3c88" stroke-width="0.7"/>';
+
+    var host = document.getElementById("schematicMap");
+    host.querySelectorAll(".landmark").forEach(function(el){ el.remove(); });
+    LANDMARKS.forEach(function(lm){
+      var p = toPercent(lm.lat, lm.lng);
+      var el = document.createElement("div");
+      el.className = "landmark" + (lm.campus ? " campus" : "");
+      el.style.left = p.x + "%";
+      el.style.top = p.y + "%";
+      el.textContent = lm.name;
+      host.appendChild(el);
+    });
+  }
+
+  /* ===== 핀 렌더링 (두 모드 공통) ===== */
+  function clearOverlays(){
+    state.overlays.forEach(function(o){ o.setMap(null); });
+    state.overlays = [];
+    document.getElementById("schematicMap")
+      .querySelectorAll(".pin, .empty-map-tip").forEach(function(el){ el.remove(); });
+    document.getElementById("mapWrap")
+      .querySelectorAll(".empty-map-tip").forEach(function(el){ el.remove(); });
+  }
+
+  function pinHtml(r, s){
+    return '<div class="pin ' + pinClass(s) + '">' +
+             '<div class="pin-dot"><span>🍴</span></div>' +
+             '<div class="pin-label">' + escapeHtml(r.name) + '</div>' +
+           '</div>';
+  }
+
+  function renderPins(){
+    clearOverlays();
+    var visible = state.restaurants.filter(passFilters);
+
+    if(visible.length === 0){
+      var tip = document.createElement("div");
+      tip.className = "empty-map-tip";
+      tip.textContent = state.restaurants.length === 0
+        ? "아직 등록된 가게가 없어요. '주변 가게 불러오기' 또는 '새 맛집 등록'으로 시작해보세요."
+        : "선택한 조건에 맞는 가게가 없어요. 필터를 조정해보세요.";
+      document.getElementById("mapWrap").appendChild(tip);
+      return;
+    }
+
+    if(state.mapMode === "kakao" && state.kakaoMap){
+      visible.forEach(function(r){
+        var s = computeStats(r);
+        var el = document.createElement("div");
+        el.innerHTML = pinHtml(r, s);
+        var node = el.firstChild;
+        node.style.position = "static";
+        node.style.transform = "none";
+        node.addEventListener("click", function(){ openDetail(r.id); });
+        var ov = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(r.lat, r.lng),
+          content: node,
+          yAnchor: 1,
+          clickable: true
+        });
+        ov.setMap(state.kakaoMap);
+        state.overlays.push(ov);
+      });
+    } else {
+      var host = document.getElementById("schematicMap");
+      visible.forEach(function(r){
+        var s = computeStats(r);
+        var p = toPercent(r.lat, r.lng);
+        var wrap = document.createElement("div");
+        wrap.innerHTML = pinHtml(r, s);
+        var node = wrap.firstChild;
+        node.style.left = p.x + "%";
+        node.style.top = p.y + "%";
+        node.addEventListener("click", function(e){
+          e.stopPropagation();
+          openDetail(r.id);
+        });
+        host.appendChild(node);
+      });
+    }
+  }
+
+  function renderAll(){
+    renderPins();
+    renderList();
+  }
+
+  /* ===== 목록 ===== */
+  function renderList(){
+    var list = document.getElementById("restaurantList");
+    list.innerHTML = "";
+    var visible = state.restaurants.filter(passFilters);
+    document.getElementById("listCount").textContent =
+      visible.length + "개 표시 중 (전체 " + state.restaurants.length + "개)";
+
+    if(visible.length === 0){
+      var e = document.createElement("div");
+      e.className = "empty-state";
+      e.textContent = state.restaurants.length === 0
+        ? "등록된 가게가 없어요. '주변 가게 불러오기'로 학교 주변 음식점을 가져오거나, 직접 등록해보세요."
+        : "조건에 맞는 가게가 없어요. 필터를 조정해보세요.";
+      list.appendChild(e);
+      return;
+    }
+
+    visible.sort(function(a,b){
+      var sa = computeStats(a), sb = computeStats(b);
+      if(sb.n !== sa.n) return sb.n - sa.n;
+      return (sb.avgRating||0) - (sa.avgRating||0);
+    });
+
+    visible.forEach(function(r){
+      var s = computeStats(r);
+      var card = document.createElement("div");
+      card.className = "r-card";
+      card.addEventListener("click", function(){ openDetail(r.id); });
+
+      var ratingHtml = s.avgRating
+        ? "★ " + s.avgRating.toFixed(1)
+        : '<span style="color:#aab;font-weight:400;">평점 없음</span>';
+
+      var tags = "";
+      if(r.source === "demo") tags += '<span class="tag demo">🎬 시연용</span>';
+      if(s.n === 0){
+        tags += '<span class="tag muted">아직 학생 리뷰 없음</span>';
+      } else {
+        tags += '<span class="tag">' + priceLabel(s.priceMode && s.priceMode.value) + '</span>';
+        tags += s.soloRatio >= 0.5
+          ? '<span class="tag good">🧍 혼밥 추천</span>'
+          : '<span class="tag muted">🧍 혼밥 애매</span>';
+        tags += s.studyRatio >= 0.5
+          ? '<span class="tag good">📖 공부 가능</span>'
+          : '<span class="tag muted">📖 공부엔 비추천</span>';
+        if(s.outletRatio >= 0.5) tags += '<span class="tag good">🔌 콘센트</span>';
+        if(s.wifiRatio >= 0.5) tags += '<span class="tag good">📶 와이파이</span>';
+        if(s.latestOpenStatus === "영업중") tags += '<span class="tag good">🟢 최근 영업중</span>';
+        else if(s.latestOpenStatus === "영업종료") tags += '<span class="tag bad">🔴 최근 영업종료 제보</span>';
+      }
+
+      var sub = escapeHtml(r.category) + (r.address ? " · " + escapeHtml(r.address) : "");
+      card.innerHTML =
+        '<h3><span>' + escapeHtml(r.name) + '</span><span class="rating">' + ratingHtml + '</span></h3>' +
+        '<div class="cat">' + sub + '</div>' +
+        '<div class="tag-row">' + tags + '</div>' +
+        (s.n
+          ? '<div class="no-review-note">학생 리뷰 ' + s.n + '개</div>'
+          : '<div class="no-review-note">첫 리뷰를 남겨주세요!</div>');
+      list.appendChild(card);
+    });
+  }
+
+  /* ===== 상세 ===== */
+  function openDetail(id){
+    var r = state.restaurants.find(function(x){ return x.id === id; });
+    if(!r) return;
+    state.activeId = id;
+    var s = computeStats(r);
+
+    document.getElementById("dTitle").textContent = r.name;
+    document.getElementById("dSub").textContent = r.category;
+
+    var meta = "";
+    if(r.address) meta += '<div>📍 ' + escapeHtml(r.address) + '</div>';
+    if(r.phone) meta += '<div>☎ ' + escapeHtml(r.phone) + '</div>';
+    if(r.placeUrl){
+      meta += '<div>🔗 <a href="' + escapeHtml(r.placeUrl) + '" target="_blank" rel="noopener">카카오맵에서 보기</a></div>';
+    }
+    var srcText;
+    if(r.source === "kakao"){
+      srcText = "가게 정보 출처: 카카오 장소 데이터 · 아래 학생 맥락 정보는 우리 학교 학생 리뷰 기준입니다.";
+    } else if(r.source === "demo"){
+      srcText = "⚠ 시연용 가상 데이터입니다. 실존 매장이 아니며 리뷰도 예시입니다.";
+    } else {
+      srcText = "학생이 직접 등록한 가게입니다. 정보가 부정확할 수 있어요.";
+    }
+    meta += '<div class="src">' + srcText + '</div>';
+    document.getElementById("dPlaceMeta").innerHTML = meta;
+
+    var g = function(label, val){
+      return '<div class="stat-box">' + label + '<b>' + val + '</b></div>';
+    };
+    var pct = function(v){ return s.n ? Math.round(v*100) + "%" : "정보 없음"; };
+    document.getElementById("dStats").innerHTML =
+      g("평균 별점", s.avgRating ? s.avgRating.toFixed(1) + " / 5" : "정보 없음") +
+      g("대표 가격대", priceLabel(s.priceMode && s.priceMode.value)) +
+      g("혼밥 가능 비율", pct(s.soloRatio)) +
+      g("공부 가능 비율", pct(s.studyRatio)) +
+      g("콘센트 있음 비율", pct(s.outletRatio)) +
+      g("최근 영업 제보", s.latestOpenStatus
+        ? s.latestOpenStatus + " (" + s.latestOpenDate + ")"
+        : "정보 없음");
+
+    document.getElementById("dReviewCount").textContent = s.n;
+    var revList = document.getElementById("dReviewList");
+    revList.innerHTML = "";
+    if(s.n === 0){
+      revList.innerHTML = '<div class="no-review-note">아직 리뷰가 없어요. 첫 리뷰를 남겨주세요!</div>';
+    } else {
+      r.reviews.slice().sort(function(a,b){
+        return (b.date||"").localeCompare(a.date||"");
+      }).forEach(function(rv){
+        var item = document.createElement("div");
+        item.className = "review-item";
+        var openIcon = rv.open === "영업중" ? "🟢" : (rv.open === "영업종료" ? "🔴" : "❔");
+        item.innerHTML =
+          '<div class="review-top"><span>' + escapeHtml(rv.nickname || "익명") +
+            ' · ★' + rv.rating + '</span><span>' + escapeHtml(rv.date || "") + '</span></div>' +
+          '<div class="review-tags">' +
+            '<span class="tag">' + priceLabel(rv.price) + '</span>' +
+            '<span class="tag">🧍 혼밥 ' + escapeHtml(rv.solo) + '</span>' +
+            '<span class="tag">' + openIcon + ' ' + escapeHtml(rv.open) + '</span>' +
+            '<span class="tag">📖 ' + escapeHtml(rv.study) + '</span>' +
+            '<span class="tag">🔌 ' + escapeHtml(rv.outlet) + '</span>' +
+            '<span class="tag">📶 ' + escapeHtml(rv.wifi) + '</span>' +
+          '</div>' +
+          (rv.comment ? '<p>' + escapeHtml(rv.comment) + '</p>' : '');
+        revList.appendChild(item);
+      });
+    }
+
+    resetReviewForm();
+    document.getElementById("detailOverlay").classList.add("open");
+  }
+
+  function resetReviewForm(){
+    document.getElementById("reviewForm").reset();
+    state.selectedStar = 5;
+    updateStarUI();
+  }
+  function updateStarUI(){
+    document.querySelectorAll("#starSelect span").forEach(function(sp){
+      sp.classList.toggle("on", parseInt(sp.dataset.v, 10) <= state.selectedStar);
+    });
+  }
+
+  document.getElementById("starSelect").addEventListener("click", function(e){
+    if(e.target.tagName === "SPAN"){
+      state.selectedStar = parseInt(e.target.dataset.v, 10);
+      updateStarUI();
+    }
+  });
+
+  document.getElementById("reviewForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var r = state.restaurants.find(function(x){ return x.id === state.activeId; });
+    if(!r) return;
+    var fd = new FormData(e.target);
+    r.reviews.push({
+      id: uid(),
+      nickname: document.getElementById("rvNickname").value.trim() || "익명",
+      rating: state.selectedStar,
+      price: fd.get("rvPrice"),
+      solo: fd.get("rvSolo"),
+      open: fd.get("rvOpen"),
+      study: fd.get("rvStudy"),
+      outlet: fd.get("rvOutlet"),
+      wifi: fd.get("rvWifi"),
+      comment: document.getElementById("rvComment").value.trim(),
+      date: todayStr()
+    });
+    save();
+    toast("리뷰가 등록되었어요!");
+    openDetail(r.id);
+    renderAll();
+  });
+
+  /* ===== 새 맛집 등록 ===== */
+  function handleMapPick(lat, lng){
+    state.pendingCoord = {lat:lat, lng:lng};
+    setPlacing(false);
+    document.getElementById("addForm").reset();
+    document.getElementById("addCoordText").textContent =
+      "선택한 위치: " + lat.toFixed(5) + ", " + lng.toFixed(5);
+    document.getElementById("addOverlay").classList.add("open");
+  }
+
+  function setPlacing(on){
+    state.placing = on;
+    document.getElementById("mapWrap").classList.toggle("placing", on);
+    document.getElementById("addModeHint").classList.toggle("active", on);
+    document.getElementById("btnAddMode").textContent = on ? "❌ 등록 취소" : "📍 새 맛집 등록";
+  }
+
+  document.getElementById("btnAddMode").addEventListener("click", function(){
+    setPlacing(!state.placing);
+  });
+
+  document.getElementById("schematicMap").addEventListener("click", function(e){
+    if(!state.placing) return;
+    var rect = this.getBoundingClientRect();
+    var x = Math.max(0, Math.min(100, (e.clientX - rect.left) / rect.width * 100));
+    var y = Math.max(0, Math.min(100, (e.clientY - rect.top) / rect.height * 100));
+    var ll = fromPercent(x, y);
+    handleMapPick(ll.lat, ll.lng);
+  });
+
+  document.getElementById("addForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var name = document.getElementById("newName").value.trim();
+    if(!name) return;
+    var c = state.pendingCoord || CAMPUS;
+    var r = {
+      id: uid(),
+      name: name,
+      category: document.getElementById("newCategory").value,
+      address: document.getElementById("newAddress").value.trim(),
+      phone: "",
+      placeUrl: "",
+      source: "user",
+      lat: c.lat,
+      lng: c.lng,
+      reviews: []
+    };
+    state.restaurants.push(r);
+    save();
+    document.getElementById("addOverlay").classList.remove("open");
+    toast("가게가 등록되었어요! 첫 리뷰를 남겨주세요.");
+    renderAll();
+    openDetail(r.id);
+  });
+
+  /* ===== 주변 가게 불러오기 (카카오 장소 검색) ===== */
+  function mapKakaoCategory(categoryName){
+    var c = categoryName || "";
+    if(c.indexOf("카페") > -1 || c.indexOf("디저트") > -1) return "카페";
+    if(c.indexOf("분식") > -1) return "분식";
+    if(c.indexOf("한식") > -1) return "한식";
+    if(c.indexOf("중식") > -1) return "중식";
+    if(c.indexOf("일식") > -1 || c.indexOf("초밥") > -1 || c.indexOf("돈까스") > -1) return "일식";
+    if(c.indexOf("양식") > -1 || c.indexOf("피자") > -1 || c.indexOf("햄버거") > -1) return "양식";
+    if(c.indexOf("술집") > -1 || c.indexOf("호프") > -1 || c.indexOf("주점") > -1) return "술집/포차";
+    return "기타";
+  }
+
+  function renderImportResults(places){
+    var box = document.getElementById("importResults");
+    box.innerHTML = "";
+    if(!places.length){
+      box.innerHTML = '<div class="empty-state">검색 결과가 없어요. 반경이나 키워드를 바꿔보세요.</div>';
+      return;
+    }
+    places.forEach(function(p){
+      var exists = state.restaurants.some(function(r){ return r.kakaoId === p.id; });
+      var item = document.createElement("div");
+      item.className = "imp-item";
+      item.innerHTML =
+        '<div class="imp-info">' +
+          '<div class="imp-name">' + escapeHtml(p.place_name) + '</div>' +
+          '<div class="imp-sub">' + escapeHtml(p.category_name || "") + '</div>' +
+          '<div class="imp-sub">' + escapeHtml(p.road_address_name || p.address_name || "") +
+            (p.distance ? " · " + p.distance + "m" : "") + '</div>' +
+        '</div>';
+      if(exists){
+        var done = document.createElement("span");
+        done.className = "added";
+        done.textContent = "✓ 추가됨";
+        item.appendChild(done);
+      } else {
+        var btn = document.createElement("button");
+        btn.className = "btn small";
+        btn.textContent = "추가";
+        btn.addEventListener("click", function(){
+          state.restaurants.push({
+            id: uid(),
+            kakaoId: p.id,
+            name: p.place_name,
+            category: mapKakaoCategory(p.category_name),
+            address: p.road_address_name || p.address_name || "",
+            phone: p.phone || "",
+            placeUrl: p.place_url || "",
+            source: "kakao",
+            lat: parseFloat(p.y),
+            lng: parseFloat(p.x),
+            reviews: []
+          });
+          save();
+          renderAll();
+          btn.replaceWith(Object.assign(document.createElement("span"), {
+            className: "added", textContent: "✓ 추가됨"
+          }));
+          toast(p.place_name + " 추가됨");
+        });
+        item.appendChild(btn);
+      }
+      box.appendChild(item);
+    });
+  }
+
+  document.getElementById("btnRunImport").addEventListener("click", function(){
+    if(state.mapMode !== "kakao"){
+      toast("카카오맵 모드에서만 검색할 수 있어요.");
+      return;
+    }
+    var box = document.getElementById("importResults");
+    box.innerHTML = '<div class="empty-state">검색 중…</div>';
+
+    var ps = new kakao.maps.services.Places();
+    var center = new kakao.maps.LatLng(CAMPUS.lat, CAMPUS.lng);
+    var radius = parseInt(document.getElementById("impRadius").value, 10);
+    var categoryCode = document.getElementById("impCategory").value;
+    var keyword = document.getElementById("impKeyword").value.trim();
+
+    var collected = [];
+    var opts = {location: center, radius: radius, size: 15};
+
+    var handler = function(data, status, pagination){
+      if(status !== kakao.maps.services.Status.OK){
+        renderImportResults(collected);
+        return;
+      }
+      collected = collected.concat(data);
+      if(pagination.hasNextPage && pagination.current < 3){
+        pagination.nextPage();
+      } else {
+        renderImportResults(collected);
+      }
+    };
+
+    if(keyword){
+      ps.keywordSearch(keyword, handler, opts);
+    } else {
+      ps.categorySearch(categoryCode, handler, opts);
+    }
+  });
+
+  document.getElementById("btnImport").addEventListener("click", function(){
+    if(state.mapMode !== "kakao"){
+      toast("먼저 '지도 설정'에서 카카오 JS 키를 등록해주세요.");
+      document.getElementById("settingsOverlay").classList.add("open");
+      return;
+    }
+    document.getElementById("importResults").innerHTML =
+      '<div class="empty-state">검색 조건을 고르고 [검색]을 눌러주세요.</div>';
+    document.getElementById("importOverlay").classList.add("open");
+  });
+
+  /* ===== 지도 설정 ===== */
+  document.getElementById("btnSettings").addEventListener("click", function(){
+    document.getElementById("kakaoKeyInput").value = getKey();
+    document.getElementById("settingsOverlay").classList.add("open");
+  });
+
+  document.getElementById("settingsForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var k = document.getElementById("kakaoKeyInput").value.trim();
+    setKey(k);
+    document.getElementById("settingsOverlay").classList.remove("open");
+    toast(k ? "키를 저장했어요. 지도를 다시 불러옵니다." : "키를 삭제했어요.");
+    location.reload();
+  });
+
+  document.getElementById("btnClearKey").addEventListener("click", function(){
+    setKey("");
+    document.getElementById("kakaoKeyInput").value = "";
+    toast("키를 삭제했어요. 배치도 모드로 돌아갑니다.");
+    location.reload();
+  });
+
+  /* ===== 모달 공통 ===== */
+  document.querySelectorAll("[data-close]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      btn.closest(".modal-overlay").classList.remove("open");
+    });
+  });
+  document.querySelectorAll(".modal-overlay").forEach(function(ov){
+    ov.addEventListener("click", function(e){
+      if(e.target === ov) ov.classList.remove("open");
+    });
+  });
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape"){
+      document.querySelectorAll(".modal-overlay.open").forEach(function(ov){
+        ov.classList.remove("open");
+      });
+      if(state.placing) setPlacing(false);
+    }
+  });
+
+  /* ===== 필터 이벤트 ===== */
+  ["filterCategory","filterPrice","fSolo","fStudy","fOutlet","fWifi","fOpen","fReviewed"]
+    .forEach(function(id){
+      document.getElementById(id).addEventListener("change", renderAll);
+    });
+
+  document.getElementById("btnClearFilter").addEventListener("click", function(){
+    document.getElementById("filterCategory").value = "";
+    document.getElementById("filterPrice").value = "";
+    ["fSolo","fStudy","fOutlet","fWifi","fOpen","fReviewed"].forEach(function(id){
+      document.getElementById(id).checked = false;
+    });
+    renderAll();
+  });
+
+  document.getElementById("btnLoadDemo").addEventListener("click", function(){
+    var existing = {};
+    state.restaurants.forEach(function(r){ if(r.demoKey) existing[r.demoKey] = true; });
+    var added = buildDemoData().filter(function(r){ return !existing[r.demoKey]; });
+    if(!added.length){ toast("데모 데이터가 이미 들어와 있어요."); return; }
+    state.restaurants = state.restaurants.concat(added);
+    save();
+    renderAll();
+    toast("시연용 데모 가게 " + added.length + "곳을 넣었어요.");
+  });
+
+  document.getElementById("btnResetData").addEventListener("click", function(){
+    if(!confirm("등록된 가게와 리뷰가 모두 삭제됩니다. 계속할까요?")) return;
+    state.restaurants = [];
+    save();
+    renderAll();
+    toast("데이터를 초기화했어요.");
+  });
+
+  /* ===== 시작 ===== */
+  load();
+  setupMap();
+  renderList();
+})();
+</script>
+</body>
+</html>
